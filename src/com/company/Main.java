@@ -13,9 +13,30 @@ public class Main {
         System.out.println("Enter name of file with Test Data");
         String fileName2 = in.nextLine();
 
-        fileName1 = "InputData_1.txt";
-        fileName2 = "TestData_1.txt";
+        fileName1 = "LearningInputData_1.txt";
+        fileName2 = "LearningOutputData_1.txt";
         Perceptron perceptron = new Perceptron(fileName1, fileName2, 2, 1);
+
+        while (true) {
+
+            System.out.println("0 - manual data enter;  1 - data from file");
+            int userChoice = in.nextInt();
+            in.nextLine();
+
+            switch (userChoice) {
+                case 0:
+                    perceptron.work();
+                    break;
+                case 1:
+                    System.out.println("Enter name of file with Data");
+                    String fileNameData = in.nextLine();
+                    perceptron.work(fileNameData);
+                    break;
+                default:
+                    return;
+            }
+
+        }
 
 
     }

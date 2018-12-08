@@ -2,19 +2,20 @@ package com.company;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Scanner;
 
 
 public class Perceptron {
 
-    double[] enterNeurons;
-    double[] hiddenNeurons;
-    double[] outNeurons;
-    double[][] fromEnterToHiddenWeights;
-    double[][] fromHiddenToOutWeights;
-    double[][] inputData = {
+    private double[] enterNeurons;
+    private double[] hiddenNeurons;
+    private double[] outNeurons;
+    private double[][] fromEnterToHiddenWeights;
+    private double[][] fromHiddenToOutWeights;
+    private double[][] inputData = {
             {0, 0}, {1, 0}, {0, 1}, {1, 1}
     };
-    double[][] outputData = {
+    private double[][] outputData = {
             {0, 1, 1, 0}
     };
 
@@ -37,19 +38,8 @@ public class Perceptron {
         fromHiddenToOutWeights = new double[hiddenNeurons.length][outNeurons.length];
 
 
-        initWeights();
         study();
 
-        for (int p = 0; p < inputData.length; p++) {
-            for (int i = 0; i < enterNeurons.length; i++)
-                enterNeurons[i] = inputData[p][i];
-
-            countOuter();
-            for (int j = 0; j < outNeurons.length; j++) {
-                System.out.println(outNeurons[j]);
-            }
-            System.out.println("-----------------------");
-        }
 
     }
 
@@ -73,7 +63,7 @@ public class Perceptron {
     }
 
 
-    public double[][] readData(String fileName) throws IOException {
+    private double[][] readData(String fileName) throws IOException {
         FileInputStream inFile = new FileInputStream(fileName);
 
         byte[] str = new byte[inFile.available()];
@@ -83,7 +73,10 @@ public class Perceptron {
 
         String[] numbers = text.split(" |\r\n");
         int i, j;
-        int n = next(numbers), m = next(numbers);
+        int n;
+        n = next(numbers);
+        int m;
+        m = next(numbers);
         double matr[][] = new double[n][m];
 
         for (i = 0; i < n; ++i)
@@ -95,7 +88,48 @@ public class Perceptron {
     }
 
 
-    public void initWeights() {
+    public void work() {
+        Scanner in = new Scanner(System.in);
+
+        for (int i = 0; i < enterNeurons.length; i++) {
+            System.out.println("Enter data in neuron " + i);
+            enterNeurons[i] = in.nextDouble();
+            in.nextLine();
+        }
+
+        countOuter();
+        printOutNeurons();
+    }
+
+    public void work(String fileName) {
+        double[][] data = null;
+
+        try {
+            data = readData(fileName);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        for (int p = 0; p < data.length; p++) {
+            for (int i = 0; i < enterNeurons.length; i++) {
+                enterNeurons[i] = data[p][i];
+            }
+
+            countOuter();
+
+            System.out.println("=== Data set № " + p + " ===|");
+            printOutNeurons();
+            System.out.println("---------------------/");
+        }
+    }
+
+    private void printOutNeurons() {
+        for (double outNeuron : outNeurons) {
+            System.out.println(outNeuron);
+        }
+    }
+
+    private void initWeights() {
         for (int i = 0; i < enterNeurons.length; i++) {
             for (int j = 0; j < hiddenNeurons.length; j++) {
                 fromEnterToHiddenWeights[i][j] = Math.random() * 0.2 + 0.1;
@@ -109,7 +143,7 @@ public class Perceptron {
 
     }
 
-    public void countOuter() {
+    private void countOuter() {
         for (int i = 0; i < hiddenNeurons.length; i++) {
             hiddenNeurons[i] = 0;
             for (int j = 0; j < enterNeurons.length; j++) {
@@ -139,13 +173,14 @@ public class Perceptron {
     }
 
     public void study() {
+        initWeights();
+
         double[] err = new double[hiddenNeurons.length];
-        double gError = 0;
+        double gError;
         do {
             gError = 0;
             for (int p = 0; p < inputData.length; p++) {
-                for (int i = 0; i < enterNeurons.length; i++)
-                    enterNeurons[i] = inputData[p][i];
+                System.arraycopy(inputData[p], 0, enterNeurons, 0, enterNeurons.length);
 
                 countOuter();
 
