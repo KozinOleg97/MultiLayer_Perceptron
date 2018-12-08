@@ -8,32 +8,34 @@ public class Perceptron {
 
     double[] enterNeurons;
     double[] hiddenNeurons;
-    double outNeurons;
+    double[] outNeurons;
     double[][] fromEnterToHiddenWeights;
-    double[] fromHiddenToOutWeights;
+    double[][] fromHiddenToOutWeights;
     double[][] inputData = {
             {0, 0}, {1, 0}, {0, 1}, {1, 1}
     };
-    double[][] testData = {
+    double[][] outputData = {
             {0, 1, 1, 0}
     };
 
     private static int currentIndex = -1;
 
-    Perceptron(String fileNameInput, String fileNameTest) {
+    Perceptron(String fileNameInput, String fileNameTest, Integer hiddenNeuronNum, Integer outNeuronNum) {
 
         try {
             inputData = readData(fileNameInput);
-            testData = readData(fileNameTest);
+            outputData = readData(fileNameTest);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
 
         enterNeurons = new double[inputData[0].length];
-        hiddenNeurons = new double[2];
+        hiddenNeurons = new double[hiddenNeuronNum];
+        outNeurons = new double[outNeuronNum];
         fromEnterToHiddenWeights = new double[enterNeurons.length][hiddenNeurons.length];
-        fromHiddenToOutWeights = new double[hiddenNeurons.length];
+        fromHiddenToOutWeights = new double[hiddenNeurons.length][outNeurons.length];
+
 
         initWeights();
         study();
@@ -43,7 +45,10 @@ public class Perceptron {
                 enterNeurons[i] = inputData[p][i];
 
             countOuter();
-            System.out.println(outNeurons);
+            for (int j = 0; j < outNeurons.length; j++) {
+                System.out.println(outNeurons[j]);
+            }
+            System.out.println("-----------------------");
         }
 
     }
@@ -85,19 +90,23 @@ public class Perceptron {
             for (j = 0; j < m; ++j)
                 matr[i][j] = nextDouble(numbers);
 
-            currentIndex=-1;
+        currentIndex = -1;
         return matr;
     }
 
 
     public void initWeights() {
         for (int i = 0; i < enterNeurons.length; i++) {
-            for (int j = 0; j < fromEnterToHiddenWeights.length; j++) {
+            for (int j = 0; j < hiddenNeurons.length; j++) {
                 fromEnterToHiddenWeights[i][j] = Math.random() * 0.2 + 0.1;
             }
         }
-        for (int i = 0; i < fromHiddenToOutWeights.length; i++)
-            fromHiddenToOutWeights[i] = Math.random() * 0.2 + 0.1;
+        for (int i = 0; i < hiddenNeurons.length; i++) {
+            for (int j = 0; j < outNeurons.length; j++) {
+                fromHiddenToOutWeights[i][j] = Math.random() * 0.2 + 0.1;
+            }
+        }
+
     }
 
     public void countOuter() {
@@ -109,12 +118,24 @@ public class Perceptron {
             if (hiddenNeurons[i] > 0.5) hiddenNeurons[i] = 1;
             else hiddenNeurons[i] = 0;
         }
-        outNeurons = 0;
-        for (int i = 0; i < hiddenNeurons.length; i++) {
-            outNeurons += hiddenNeurons[i] * fromHiddenToOutWeights[i];
+
+        for (int i = 0; i < outNeurons.length; i++) {
+            outNeurons[i] = 0;
         }
-        if (outNeurons > 0.5) outNeurons = 1;
-        else outNeurons = 0;
+
+        for (int i = 0; i < outNeurons.length; i++) {
+            for (int j = 0; j < hiddenNeurons.length; j++) {
+                outNeurons[i] += hiddenNeurons[j] * fromHiddenToOutWeights[j][i];
+            }
+        }
+
+        for (int i = 0; i < outNeurons.length; i++) {
+            if (outNeurons[i] > 0.5) { /////////////////////////////////////////////////////////  <---
+                outNeurons[i] = 1;
+            } else {
+                outNeurons[i] = 0;
+            }
+        }
     }
 
     public void study() {
@@ -128,19 +149,35 @@ public class Perceptron {
 
                 countOuter();
 
-                double lErr = testData[p][0] - outNeurons;
-                gError += Math.abs(lErr);
 
-                for (int i = 0; i < hiddenNeurons.length; i++)
-                    err[i] = lErr * fromHiddenToOutWeights[i];
+                double[] lErr = new double[outNeurons.length];
+
+                for (int i = 0; i < outNeurons.length; i++) {
+                    lErr[i] = outputData[p][i] - outNeurons[i];
+                    gError += Math.abs(lErr[i]);
+                }
+
+
+                for (int i = 0; i < hiddenNeurons.length; i++) {
+                    for (int j = 0; j < outNeurons.length; j++) {
+                        err[i] = lErr[j] * fromHiddenToOutWeights[i][j]; //////////////////////////////// <-
+                    }
+                }
+
+
                 for (int i = 0; i < enterNeurons.length; i++) {
                     for (int j = 0; j < hiddenNeurons.length; j++) {
                         fromEnterToHiddenWeights[i][j] += 0.1 * err[j] * enterNeurons[i];
 
                     }
                 }
-                for (int i = 0; i < hiddenNeurons.length; i++)
-                    fromHiddenToOutWeights[i] += 0.1 * lErr * hiddenNeurons[i];
+
+
+                for (int i = 0; i < hiddenNeurons.length; i++) {
+                    for (int j = 0; j < outNeurons.length; j++) {
+                        fromHiddenToOutWeights[i][j] += 0.1 * lErr[j] * hiddenNeurons[i];
+                    }
+                }
             }
         } while (gError != 0);
     }
