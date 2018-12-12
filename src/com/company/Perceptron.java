@@ -149,7 +149,7 @@ public class Perceptron {
             for (int j = 0; j < enterNeurons.length; j++) {
                 hiddenNeurons[i] += enterNeurons[j] * fromEnterToHiddenWeights[j][i];
             }
-            if (hiddenNeurons[i] > 0.5) hiddenNeurons[i] = 1;
+            if (hiddenNeurons[i] > 0.5) hiddenNeurons[i] = 1;////TODO sigmoid activation function////////////////////////////////
             else hiddenNeurons[i] = 0;
         }
 
@@ -164,7 +164,7 @@ public class Perceptron {
         }
 
         for (int i = 0; i < outNeurons.length; i++) {
-            if (outNeurons[i] > 0.5) { /////////////////////////////////////////////////////////  <---
+            if (outNeurons[i] > 0.5) { //////TODO sigmoid activation function///////////////////////////////////////////////////  <---
                 outNeurons[i] = 1;
             } else {
                 outNeurons[i] = 0;
