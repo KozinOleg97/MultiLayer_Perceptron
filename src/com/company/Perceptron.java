@@ -69,7 +69,7 @@ public class Perceptron {
 
 //        weights = new double[][][]
 
-        study();
+       // study();
 
 
     }
