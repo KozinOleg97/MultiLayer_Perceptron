@@ -1,7 +1,6 @@
 package com.company;
 
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -16,7 +15,22 @@ public class Perceptron {
     List<Double[][]> pWeights_old;
     List<Double[]> last_b;
 
+    List<Integer> pConf;
+    List<learnSet> learnSetList;
+
     double learnFactor = 0.1;
+
+
+    class learnSet {
+        learnSet(int inputsN, int outputsN) {
+            inputs = new double[inputsN];
+            outputs = new double[outputsN];
+        }
+
+        public double[] inputs;
+        public double[] outputs;
+    }
+
 
     //private Double[] enterNeurons;
     //private Double[] pLayers;
@@ -40,22 +54,38 @@ public class Perceptron {
     private Double[] expectedOutput;
     Double[] result;
 
-    Perceptron(String fileNameInput, String fileNameTest, Integer hiddenNeuronNum, Integer outNeuronNum) {
-
+    Perceptron(String fileNameLearnSer, String fileNamePerceptronConf) {
+/*
         try {
             inputData = readData(fileNameInput);
             outputData = readData(fileNameTest);
         } catch (IOException e) {
             e.printStackTrace();
+        }*/
+
+        pConf = readPerceptron(fileNamePerceptronConf);
+        learnSetList = readLearnSet(fileNameLearnSer);
+
+        pLayers = new ArrayList<>();
+        pLayers_errors = new ArrayList<>();
+        for (Integer layerSize : pConf) {
+            pLayers.add(new double[layerSize]);
+            pLayers_errors.add(new double[layerSize]);
         }
 
+        pWeights = new ArrayList<>();
+        for (int i = 0; i < pLayers.size() - 1; i++) {
+            pWeights.add(new double[pConf.get(i + 1)][pConf.get(i)]); //TODO check i - index (correct)
+        }
 
-        int layers = 2;
+        init();
+
+       /* int layers = 2;
         int hiddenNeuronNum1 = 4;
-        int hiddenNeuronNum2 = 3;
+        int hiddenNeuronNum2 = 3;*/
         //enterNeurons = new Double[inputData[0].length];
         //pLayers = new Double[hiddenNeuronNum];
-        pLayers = new ArrayList<double[]>();
+      /*  pLayers = new ArrayList<double[]>();
         pLayers.add(new double[inputData[0].length]);
         pLayers.add(new double[hiddenNeuronNum1]);
         pLayers.add(new double[hiddenNeuronNum2]);
@@ -70,12 +100,12 @@ public class Perceptron {
         pWeights = new ArrayList<double[][]>();
         pWeights.add(new double[inputData[0].length][hiddenNeuronNum1]);
         pWeights.add(new double[hiddenNeuronNum1][hiddenNeuronNum2]);
-        pWeights.add(new double[hiddenNeuronNum2][outNeuronNum]);
+        pWeights.add(new double[hiddenNeuronNum2][outNeuronNum]);*/
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-        pWeights_old = new ArrayList<Double[][]>();
+     /*   pWeights_old = new ArrayList<Double[][]>();
         pWeights_old.add(new Double[inputData[0].length][hiddenNeuronNum1]);
         pWeights_old.add(new Double[hiddenNeuronNum1][hiddenNeuronNum2]);
         pWeights_old.add(new Double[hiddenNeuronNum2][outNeuronNum]);
@@ -86,7 +116,7 @@ public class Perceptron {
         last_b.add(new Double[hiddenNeuronNum2]);
         last_b.add(new Double[outNeuronNum]);
 
-        result = new Double[outNeuronNum];
+        result = new Double[outNeuronNum];*/
 
         //outNeurons = new Double[outNeuronNum];
         //enterToHiddenWeights = new Double[enterNeurons.length][pLayers.get(0).length];
@@ -100,6 +130,28 @@ public class Perceptron {
 
         // study();
 
+
+    }
+
+    public void masTrain() {
+        for (learnSet set : learnSetList) {
+            train(set.inputs, set.outputs);
+        }
+    }
+
+    public void manualUse() {
+        double[] manualInput = new double[pLayers.get(0).length];
+
+        Scanner in = new Scanner(System.in);
+        for (int i = 0; i < manualInput.length; i++) {
+            System.out.println("Enter data in neuron " + i);
+            manualInput[i] = in.nextDouble();
+            in.nextLine();
+        }
+
+        forwardPropagation(manualInput);
+
+        printOutNeurons();
 
     }
 
@@ -164,7 +216,9 @@ public class Perceptron {
     public static double[][] multiplyByMatrix(double[][] m1, double[][] m2) {
         int m1ColLength = m1[0].length; // m1 columns length
         int m2RowLength = m2.length;    // m2 rows length
-        if (m1ColLength != m2RowLength) return null; // matrix multiplication is not possible
+        if (m1ColLength != m2RowLength) {
+            return null; // matrix multiplication is not possible
+        }
         int mRRowLength = m1.length;    // m result rows length
         int mRColLength = m2[0].length; // m result columns length
 
@@ -232,47 +286,101 @@ public class Perceptron {
         return matr;
     }
 
+    private List<Integer> readPerceptron(String fileName) {
 
-    public void work() {
-        Scanner in = new Scanner(System.in);
+        List<Integer> perceptronConf = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+            String line = br.readLine();
+            //perceptronConf.add(Integer.parseInt(line));
 
-        Double[] enterNeurons = pLayers.get(0);
-        for (int i = 0; i < enterNeurons.length; i++) {
-            System.out.println("Enter data in neuron " + i);
-            enterNeurons[i] = in.nextDouble();
-            in.nextLine();
-        }
+            while (line != null) {
+                perceptronConf.add(Integer.parseInt(line));
+                line = br.readLine();
 
-        forwardPropagation();
-        printOutNeurons();
-    }
+            }
 
-    public void work(String fileName) {
-        Double[][] data = null;
-
-        try {
-            data = readData(fileName);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return perceptronConf;
+    }
 
-        Double[] enterNeurons = pLayers.get(0);
-        for (int p = 0; p < data.length; p++) {
+    private List<learnSet> readLearnSet(String fileName) {
+
+        List<learnSet> learnSetList = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+            //StringBuilder sb = new StringBuilder();
+            String line;
+            line = br.readLine();
+            String[] tempMas = line.split(" ");
+            int inputN = Integer.parseInt(tempMas[0]);
+            int outputN = Integer.parseInt(tempMas[1]);
+
+            line = br.readLine();
+            while (line != null) {
+                tempMas = line.split(" ");
+
+                learnSet newSet = new learnSet(inputN, outputN);
+                for (int i = 0; i < inputN; i++) {
+                    newSet.inputs[i] = Double.parseDouble(tempMas[i]);
+                }
+                for (int i = inputN; i < inputN + outputN; i++) {
+                    newSet.outputs[i - inputN] = Double.parseDouble(tempMas[i]);
+                }
+
+                learnSetList.add(newSet);
+                line = br.readLine();
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return learnSetList;
+    }
+
+    /*
+        public void work() {
+            Scanner in = new Scanner(System.in);
+
+            double[] enterNeurons = pLayers.get(0);
             for (int i = 0; i < enterNeurons.length; i++) {
-                enterNeurons[i] = data[p][i];
+                System.out.println("Enter data in neuron " + i);
+                enterNeurons[i] = in.nextDouble();
+                in.nextLine();
             }
 
             forwardPropagation();
-
-            System.out.println("=== Data set № " + p + " ===|");
             printOutNeurons();
-            System.out.println("---------------------/");
         }
-    }
 
+        public void work(String fileName) {
+            Double[][] data = null;
+
+            try {
+                data = readData(fileName);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            double[] enterNeurons = pLayers.get(0);
+            for (int p = 0; p < data.length; p++) {
+                for (int i = 0; i < enterNeurons.length; i++) {
+                    enterNeurons[i] = data[p][i];
+                }
+
+                forwardPropagation();
+
+                System.out.println("=== Data set № " + p + " ===|");
+                printOutNeurons();
+                System.out.println("---------------------/");
+            }
+        }
+    */
     private void printOutNeurons() {
-        Double[] outNeurons = pLayers.get(0);
-        for (Double outNeuron : outNeurons) {
+        double[] outNeurons = pLayers.get(pLayers.size() - 1);
+        for (double outNeuron : outNeurons) {
             System.out.println(outNeuron);
         }
     }
@@ -288,8 +396,8 @@ public class Perceptron {
 
         initMatrix(pWeights);
         //initMatrix(pWeights_old);
-        initMas(pLayers);
-        initMas(pLayers_errors);
+        //initMas(pLayers);
+        //initMas(pLayers_errors);
         //initMas(last_b);
 
 
@@ -329,11 +437,12 @@ public class Perceptron {
     }
 
 
-    private void forwardPropagation() {
-        init();
+    private void forwardPropagation(double[] input) {
+        //init();
+        pLayers.set(0, input);
 
         //forward
-        for (int i = 0; i < pLayers.size() - 1 - 1; i++) {
+        for (int i = 0; i < pLayers.size() - 1; i++) {
             double[][] curLayer = toMatrix(pLayers.get(i));
             double[][] weights = pWeights.get(i);
             //calc next layer
@@ -353,15 +462,15 @@ public class Perceptron {
 
     }
 
-    public void train() {
-        forwardPropagation();
+    public void train(double[] inputs, double[] expectedOutputs) {
+        forwardPropagation(inputs);
 
-        double[] tempOutputData = {1, 0};
+        //double[] tempOutputData = {1, 0};
 
-        double[][] outouts = toMatrix(pLayers.get(pLayers.size() - 1));
-        double[][] targets = toMatrix(tempOutputData);
+        double[][] outputs = toMatrix(pLayers.get(pLayers.size() - 1));
+        double[][] targets = toMatrix(expectedOutputs);
 
-        double[][] outputErrors = subtractMatrix(targets, outouts);
+        double[][] outputErrors = subtractMatrix(targets, outputs); //TODO kvadratich otklonenie
         pLayers_errors.set(pLayers_errors.size() - 1, toArray(outputErrors));
 
         for (int l = pLayers.size() - 2; l >= 1; l--) {
@@ -377,26 +486,29 @@ public class Perceptron {
 
         //change weights
 
-        for (int l = pLayers.size() - 2; l >= 1; l--) {
+        for (int l = pLayers.size() - 2; l >= 0; l--) {// to 0 or 1
             double[] curOutputErrors = pLayers_errors.get(l + 1);
 
             double[] curOutput = pLayers.get(l + 1);
 
             int rows = curOutput.length;
-            double[] gradient = new double[rows];
+            double[] gradients = new double[rows];
             for (int row = 0; row < rows; row++) {
-                gradient[row] = learnFactor * curOutputErrors[row] * function(curOutput[row]);
+                gradients[row] = learnFactor * curOutputErrors[row] * derivative(curOutput[row]);
             }
 
             double[] curLayer = pLayers.get(l);
 
-            double[][] deltaWeights = multiplyByMatrix(toMatrix(gradient), transposeMatrix(toMatrix(curLayer)));
+            double[][] deltaWeights = multiplyByMatrix(toMatrix(gradients), transposeMatrix(toMatrix(curLayer)));
 
-            pWeights.set(l, addMatrix(pWeights.get(l), deltaWeights));
+            double[][] resWeights = addMatrix(pWeights.get(l), deltaWeights);
+            pWeights.set(l, resWeights);
+            //pWeights.set(l, addMatrix(pWeights.get(l), deltaWeights));
 
         }
 
     }
+}
 
 /*
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
