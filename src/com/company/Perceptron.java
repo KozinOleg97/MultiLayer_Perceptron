@@ -2,6 +2,7 @@ package com.company;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
@@ -11,6 +12,7 @@ public class Perceptron {
     List<double[]> pLayers;
     List<double[]> pLayers_errors;
     List<double[][]> pWeights;
+    List<double[]> pBaises;
 
     List<Integer> pConf;
     List<learnSet> learnSetList;
@@ -54,16 +56,52 @@ public class Perceptron {
         }
 
         pWeights = new ArrayList<>();
+        pBaises = new ArrayList<>();
         for (int i = 0; i < pLayers.size() - 1; i++) {
-            pWeights.add(new double[pConf.get(i + 1)][pConf.get(i)]); //TODO check i - index (correct)
+            pWeights.add(new double[pConf.get(i + 1)][pConf.get(i)]);
+            pBaises.add(new double[pLayers.get(i + 1).length]);
         }
 
         init();
     }
 
-    public void masTrain() {
-        for (learnSet set : learnSetList) {
-            train(set.inputs, set.outputs);
+    public void masTrain() {//TODO accumulate weights deltas, and add them after train epoch
+        Scanner in = new Scanner(System.in);
+
+        System.out.println("Would you like to ste biases? y/n");
+        String ans = in.nextLine();
+
+        if (ans.equals("y")) {
+            for (int i = 0; i < pBaises.size(); i++) {
+                double[] curBias = pBaises.get(i);
+                for (int j = 0; j < curBias.length; j++) {
+
+                    System.out.println("Enter layer - " + (i + 1) + ", neuron " + j + " bias");
+                    double value = in.nextDouble();
+                    in.nextLine();
+                    curBias[j] = value;
+                }
+            }
+        }
+
+        System.out.println("Enter the number of iterations");
+        int iters = in.nextInt();
+        in.nextLine();
+
+        //iter's times train
+        for (int i = 0; i < iters; i++) {
+
+            //clone learn sets to temp list
+            List<learnSet> shuffledLearnSets = new ArrayList<>();
+            for (learnSet set : learnSetList) {
+                shuffledLearnSets.add(set);
+            }
+            //shuffle temp list
+            Collections.shuffle(shuffledLearnSets);
+            //use shuffled list
+            for (learnSet set : shuffledLearnSets) {
+                train(set.inputs, set.outputs);
+            }
         }
     }
 
@@ -117,6 +155,8 @@ public class Perceptron {
         return res;
     }
 
+
+
     public static double[][] addMatrix(double[][] a, double[][] b) {
 
         double[][] res = new double[a.length][b[0].length];
@@ -140,6 +180,8 @@ public class Perceptron {
                 temp[j][i] = m[i][j];
         return temp;
     }
+
+
 
     public static double[][] multiplyByMatrix(double[][] m1, double[][] m2) {
         int m1ColLength = m1[0].length; // m1 columns length
@@ -167,7 +209,7 @@ public class Perceptron {
     }
 
     public Double derivative(Double x) {
-        return function(x) * (1d - function(x));
+        return x * (1 - x);
     }
 
 
@@ -277,6 +319,7 @@ public class Perceptron {
 
     private void init() {
         initMatrix(pWeights);
+        initMas(pBaises);
         //initMas(pLayers);
         //initMas(pLayers_errors);
     }
@@ -288,7 +331,8 @@ public class Perceptron {
             int columns = curWeights[0].length;
             for (int i = 0; i < rows; i++) {
                 for (int j = 0; j < columns; j++) {
-                    curWeights[i][j] = Math.random() * 0.2 + 0.1;
+                    //curWeights[i][j] = 0.5 + (Math.random() * ((Max - Min) + 1))
+                    curWeights[i][j] = Math.random() - 0.5;//* 0.2 + 0.1;
 
                 }
             }
@@ -300,7 +344,7 @@ public class Perceptron {
 
             int rows = curLayer.length;
             for (int i = 0; i < rows; i++) {
-                curLayer[i] = 0.0;
+                curLayer[i] = Math.random() - 0.5;
 
 
             }
@@ -319,12 +363,14 @@ public class Perceptron {
             //calc next layer
             double[][] outputs = multiplyByMatrix(weights, curLayer);
 
+            double[] curBais = pBaises.get(i);
+
             //activation function
             int rows = outputs.length;
             int columns = outputs[0].length;
             for (int row = 0; row < rows; row++) {
                 for (int col = 0; col < columns; col++) {
-                    outputs[row][col] = function(outputs[row][col]);
+                    outputs[row][col] = function(outputs[row][col] + curBais[row]);
 
                 }
             }
@@ -341,6 +387,7 @@ public class Perceptron {
         double[][] outputs = toMatrix(pLayers.get(pLayers.size() - 1));
         double[][] targets = toMatrix(expectedOutputs);
 
+        //calc err of last layer (output)
         double[][] outputErrors = subtractMatrix(targets, outputs); //TODO kvadratich otklonenie
         pLayers_errors.set(pLayers_errors.size() - 1, toArray(outputErrors));
 
@@ -348,15 +395,15 @@ public class Perceptron {
 
             double[][] transposeWeights = transposeMatrix(pWeights.get(l));
             //calc errors for each layer
-            double[][] curLayerErrors = multiplyByMatrix(transposeWeights, outputErrors);
+            double[][] curLayerErrors = multiplyByMatrix(transposeWeights, outputErrors);//TODO check this
 
-            pLayers_errors.set(pLayers_errors.size() - 1 - l, toArray(curLayerErrors));
+            pLayers_errors.set(l, toArray(curLayerErrors));
 
             outputErrors = curLayerErrors;
         }//calc all neurons errors
 
-        //change weights
-
+        //////change weights
+        //   // calc gradients
         for (int l = pLayers.size() - 2; l >= 0; l--) {// to 0 or 1
             double[] curOutputErrors = pLayers_errors.get(l + 1);
 
@@ -368,8 +415,13 @@ public class Perceptron {
                 gradients[row] = learnFactor * curOutputErrors[row] * derivative(curOutput[row]);
             }
 
-            double[] curLayer = pLayers.get(l);
+            //change cur layers bias
+            double[] curBias = pBaises.get(l);
+            curBias = toArray(addMatrix(toMatrix(curBias), toMatrix(gradients)));
+            pBaises.set(l, curBias);
 
+            //calc weights delta
+            double[] curLayer = pLayers.get(l);
             double[][] deltaWeights = multiplyByMatrix(toMatrix(gradients), transposeMatrix(toMatrix(curLayer)));
 
             double[][] resWeights = addMatrix(pWeights.get(l), deltaWeights);
